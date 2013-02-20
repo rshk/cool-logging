@@ -58,3 +58,6 @@ tramp
 
 # SublimeText project files
 *.sublime-workspace
+
+# Generated..
+/MANIFEST
