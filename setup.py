@@ -8,12 +8,12 @@ setup(
     license='GNU General Public License v3 or later (GPLv3+)',
     author='Samuele Santi',
     author_email='samuele@samuelesanti.com',
-    description='',
+    description='Nice colorful formatter for Python logging',
     classifiers=[
         "License :: OSI Approved :: "
         "GNU General Public License v3 or later (GPLv3+)",
     ],
     install_requires=[
         "termcolor",
-    ]
+    ],
 )
