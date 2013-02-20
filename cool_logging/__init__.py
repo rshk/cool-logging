@@ -6,15 +6,13 @@
 __version__ = '0.1-alpha'
 
 
-from cool_logging.formatters import ConsoleColorFormatter
-
-
 def getLogger(name=None, level=None, handler=None):
     """
     Utility function, since I'm lazy :)
     """
     import logging
     import sys
+    from cool_logging.formatters import ConsoleColorFormatter
 
     logger = logging.getLogger(name)
 
