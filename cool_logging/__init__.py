@@ -3,7 +3,7 @@
 :created: 2/20/13 7:07 PM
 """
 
-__version__ = '0.1-alpha'
+__version__ = '0.1-beta'
 
 
 def getLogger(name=None, level=None, handler=None):
