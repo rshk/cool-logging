@@ -1,9 +1,9 @@
 """
-:author: samu
+:author: Samuele Santi
 :created: 2/20/13 7:07 PM
 """
 
-__version__ = '0.1-beta'
+__version__ = '0.2-beta'
 
 
 def getLogger(name=None, level=None, handler=None):
