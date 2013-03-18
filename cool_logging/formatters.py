@@ -2,22 +2,26 @@
 :author: samu
 :created: 2/20/13 7:11 PM
 """
+from UserDict import DictMixin
+from string import Template
 
 import logging
 
 from termcolor import colored
 
 
+# LOG_FORMAT_CONSOLE_COLOR = \
+#     "%(c_date)s %(c_leveltag)s %(c_name)s %(c_function)s\n%(indented_message)s"
 LOG_FORMAT_CONSOLE_COLOR = \
-    "%(c_date)s %(c_leveltag)s %(c_name)s %(c_function)s\n%(indented_message)s"
-LOG_DATEFMT_CONSOLE_COLOR = "%F %T"
+    u"${c_leveltag} ${c_name} in ${c_function} at ${c_date}\n${prefixed_message}"
+LOG_DATEFMT_CONSOLE_COLOR = u"%F %T"
 
 
 def _colorer(*args, **kwargs):
     return lambda x: colored(x, *args, **kwargs)
 
 
-class LazyRecordColorer(object):
+class LazyRecordColorer(DictMixin):
     colorers = {
         logging.DEBUG: _colorer('cyan', 'on_blue', attrs=['bold']),
         logging.INFO: _colorer('yellow', 'on_green', attrs=['bold']),
@@ -26,45 +30,106 @@ class LazyRecordColorer(object):
         logging.CRITICAL: _colorer('yellow', 'on_red', attrs=['bold']),
     }
 
-    leveltags = {
-        logging.DEBUG: "DBG>",
-        logging.INFO: "INFO",
-        logging.WARNING: "WARN",
-        logging.ERROR: "ERR!",
-        logging.CRITICAL: "CRIT",
+    text_colorers = {
+        logging.DEBUG: _colorer('white'),
+        logging.INFO: _colorer('green'),
+        logging.WARNING: _colorer('yellow'),
+        logging.ERROR: _colorer('red'),
+        logging.CRITICAL: _colorer('red', attrs=['bold']),
     }
+
+    leveltags = {
+        logging.DEBUG: u"DBUG",
+        logging.INFO: u"INFO",
+        logging.WARNING: u"WARN",
+        logging.ERROR: u"ERR!",
+        logging.CRITICAL: u"CRIT",
+    }
+
+    _extra_fields = [
+        'c_date',
+        'c_asctime',
+        'c_leveltag',
+        'c_levelname',
+        'c_name',
+        'c_function',
+        'indented_message',
+        'wrapped_message',
+        'prefixed_message'
+    ]
 
     def __init__(self, record):
         self.record = record
 
     def __getitem__(self, item):
-        method = 'get_%s' % item
-        if hasattr(self, method):
-            return getattr(self, method)()
+        if item not in self.keys():
+            raise KeyError(item)
+
+        if item in self._extra_fields:
+            return getattr(self, item)
+
         return self.record.__dict__[item]
 
-    def get_c_date(self):
-        return colored('%(asctime)s,%(msecs)03d' % self.record.__dict__, 'cyan')
+        # return getattr(self.record, item)
+        # return self.record.__dict__[item]
 
-    def get_c_asctime(self):
+    def __getattr__(self, item):
+        return self.record.__dict__[item]
+
+    def keys(self):
+        return self._extra_fields + self.record.__dict__.keys()
+
+    @property
+    def c_date(self):
+        return colored(
+            u'{},{:03d}'.format(self.asctime, int(self.msecs)),
+            'cyan')
+
+    @property
+    def c_asctime(self):
         return colored(self.record.asctime, 'cyan')
 
-    def get_c_leveltag(self):
+    @property
+    def c_leveltag(self):
         colorer = self.colorers.get(self.record.levelno, lambda x: x)
         return colorer(' %s ' % self.leveltags.get(self.record.levelno, '????'))
 
-    def get_c_levelname(self):
+    @property
+    def c_levelname(self):
         colorer = self.colorers.get(self.record.levelno, lambda x: x)
         return colorer(' %s ' % self.record.levelname)
 
-    def get_c_name(self):
-        return colored('[%s]' % self.record.name, 'yellow', attrs=['bold'])
+    @property
+    def c_name(self):
+        return colored(' %s ' % self.record.name, 'white', 'on_magenta', attrs=['bold'])
 
-    def get_c_function(self):
-        return colored('%(module)s.%(funcName)s' %
-                       self.record.__dict__, 'yellow')
+    @property
+    def c_function(self):
+        return u'{}.{}'.format(
+            colored(self.module, 'green'),
+            colored(self.funcName, 'green', attrs=['bold']),
+        )
 
-    def get_indented_message(self):
+    @property
+    def colored_message(self):
+        colorer = self.text_colorers.get(self.record.levelno) or (lambda x: x)
+        lines = self.record.getMessage().splitlines()
+        return u"\n".join(colorer(l) for l in lines)
+
+    @property
+    def indented_message(self):
+        lines = self.record.getMessage().splitlines()
+        return u"\n".join(u"    {}".format(l) for l in lines)
+
+    @property
+    def prefixed_message(self):
+        c_levelname = self.c_leveltag
+        # colorer = self.text_colorers.get(self.record.levelno) or (lambda x: x)
+        lines = self.record.getMessage().splitlines()
+        return u"\n".join(u"{}     {}".format(c_levelname, l) for l in lines)
+
+    @property
+    def wrapped_message(self):
         from textwrap import TextWrapper
         lines = self.record.getMessage().splitlines()
         new_lines = []
@@ -72,7 +137,7 @@ class LazyRecordColorer(object):
         for line in lines:
             for _line in w.wrap(line):
                 new_lines.append(_line)
-        return "\n".join(['    %s' % l for l in new_lines])
+        return u"\n".join([u"    %s" % l for l in new_lines])
 
 
 class ConsoleColorFormatter(logging.Formatter):
@@ -102,21 +167,29 @@ class ConsoleColorFormatter(logging.Formatter):
         The message, wrapped to fit 70 columns and indented by four spaces.
     """
 
-    def __init__(self, fmt=None, datefmt=None):
+    def __init__(self, fmt=None, datefmt=None, newstyle=False):
         if fmt is None:
             fmt = LOG_FORMAT_CONSOLE_COLOR
+            newstyle = True
         if datefmt is None:
             datefmt = LOG_DATEFMT_CONSOLE_COLOR
-        logging.Formatter.__init__(self, fmt=fmt, datefmt=datefmt)
+        super(ConsoleColorFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
+        self._newstyle = newstyle
+        if newstyle:
+            self._tpl = Template(self._fmt)
 
     def format(self, record):
         record.message = record.getMessage()
-
-        #if string.find(self._fmt, "%(asctime)") >= 0:
-
         record.asctime = self.formatTime(record, self.datefmt)
 
-        formatted_record = self._fmt % LazyRecordColorer(record)
+        if self._newstyle:
+            # lcr = LazyRecordColorer(record)
+            # import pdb; pdb.set_trace()
+            # formatted_record = self._fmt.format(LazyRecordColorer(record))
+            formatted_record = self._tpl.substitute(LazyRecordColorer(record))
+
+        else:
+            formatted_record = self._fmt % LazyRecordColorer(record)
 
         if record.exc_info:
             # Cache the traceback text to avoid converting it multiple times

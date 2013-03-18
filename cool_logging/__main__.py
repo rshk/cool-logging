@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 
 if __name__ == '__main__':
     from cool_logging import getLogger
@@ -14,3 +15,6 @@ if __name__ == '__main__':
                  "will certainly exceed the 70 columns limit allowed "
                  "by the custom formatter.\n"
                  "This is another line of text, at last..")
+
+    logger.debug(u"Øk, ñøw let's try with sömë utf8 cháráctérß..")
+    logger.debug(u"\xd8k, \xf1\xf8w let's try with s\xf6m\xeb utf8 ch\xe1r\xe1ct\xe9r\xdf..")

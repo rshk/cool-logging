@@ -23,6 +23,11 @@ def getLogger(name=None, level=None, handler=None):
     if handler is None:
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(ConsoleColorFormatter())
-    logger.addHandler(handler)
+
+    if not isinstance(handler, (list, tuple)):
+        handler = [handler]
+
+    for h in handler:
+        logger.addHandler(h)
 
     return logger
