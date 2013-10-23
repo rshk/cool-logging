@@ -61,3 +61,6 @@ tramp
 
 # Generated..
 /MANIFEST
+
+.cache
+__pycache__
