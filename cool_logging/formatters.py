@@ -12,9 +12,12 @@ from termcolor import colored
 
 # LOG_FORMAT_CONSOLE_COLOR = \
 #     "%(c_date)s %(c_leveltag)s %(c_name)s %(c_function)s\n%(indented_message)s"
-LOG_FORMAT_CONSOLE_COLOR = \
-    u"${c_leveltag} ${c_name} in ${c_function} at ${c_date}\n${prefixed_message}"
+LOG_FORMAT_CONSOLE_COLOR = (
+    u"${c_leveltag} ${c_name} in ${c_function} at ${c_date}\n"
+    u"${prefixed_message}")
 LOG_DATEFMT_CONSOLE_COLOR = u"%F %T"
+LOG_FORMAT_CONSOLE_COLOR_SIMPLE = (
+    u"${c_levelname_lite} ${colored_message}")
 
 
 def _colorer(*args, **kwargs):
@@ -30,8 +33,16 @@ class LazyRecordColorer(DictMixin):
         logging.CRITICAL: _colorer('yellow', 'on_red', attrs=['bold']),
     }
 
+    colorers_lite = {
+        logging.DEBUG: _colorer('cyan', attrs=['bold']),
+        logging.INFO: _colorer('green', attrs=['bold']),
+        logging.WARNING: _colorer('yellow', attrs=['bold']),
+        logging.ERROR: _colorer('red', attrs=['bold']),
+        logging.CRITICAL: _colorer('red', attrs=['bold']),
+    }
+
     text_colorers = {
-        logging.DEBUG: _colorer('white'),
+        logging.DEBUG: _colorer('cyan'),
         logging.INFO: _colorer('green'),
         logging.WARNING: _colorer('yellow'),
         logging.ERROR: _colorer('red'),
@@ -51,11 +62,13 @@ class LazyRecordColorer(DictMixin):
         'c_asctime',
         'c_leveltag',
         'c_levelname',
+        'c_levelname_lite',
         'c_name',
         'c_function',
         'indented_message',
         'wrapped_message',
-        'prefixed_message'
+        'prefixed_message',
+        'colored_message',
     ]
 
     def __init__(self, record):
@@ -98,6 +111,11 @@ class LazyRecordColorer(DictMixin):
     def c_levelname(self):
         colorer = self.colorers.get(self.record.levelno, lambda x: x)
         return colorer(' %s ' % self.record.levelname)
+
+    @property
+    def c_levelname_lite(self):
+        colorer = self.colorers_lite.get(self.record.levelno, lambda x: x)
+        return colorer('%s' % self.record.levelname)
 
     @property
     def c_name(self):
@@ -203,3 +221,15 @@ class ConsoleColorFormatter(logging.Formatter):
             formatted_record += record.exc_text
 
         return formatted_record
+
+
+class SimpleColorLog(ConsoleColorFormatter):
+
+    def __init__(self, fmt=None, datefmt=None, newstyle=False):
+        if fmt is None:
+            fmt = LOG_FORMAT_CONSOLE_COLOR_SIMPLE
+            newstyle = True
+        if datefmt is None:
+            datefmt = LOG_DATEFMT_CONSOLE_COLOR
+        super(SimpleColorLog, self).__init__(fmt=fmt, datefmt=datefmt,
+                                             newstyle=newstyle)
