@@ -10,8 +10,6 @@ import logging
 from termcolor import colored
 
 
-# LOG_FORMAT_CONSOLE_COLOR = \
-#     "%(c_date)s %(c_leveltag)s %(c_name)s %(c_function)s\n%(indented_message)s"
 LOG_FORMAT_CONSOLE_COLOR = (
     u"${c_leveltag} ${c_name} in ${c_function} at ${c_date}\n"
     u"${prefixed_message}")
